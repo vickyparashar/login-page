@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        form { max-width: 300px; margin: auto; }
+        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Signup Form</h2>
+    <form id="signupForm">
+        <input type="text" id="name" placeholder="Enter Name" required>
+        <input type="email" id="email" placeholder="Enter Email" required>
+        <button type="submit">Signup</button>
+    </form>
+    <h3>Saved Users:</h3>
+    <ul id="userList"></ul>
+
+    <script>
+        const GITHUB_USERNAME = "your-username"; // Replace with your GitHub username
+        const REPO_NAME = "your-repo"; // Replace with your repo name
+        const FILE_PATH = "users.json";
+        const TOKEN = "your-personal-access-token"; // Use GitHub Token with `repo` scope
+
+        async function fetchUsers() {
+            try {
+                let res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`);
+                let data = await res.json();
+                let content = JSON.parse(atob(data.content));
+                document.getElementById("userList").innerHTML = content.map(user => `<li>${user.name} - ${user.email} - ${user.date}</li>`).join("");
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+        }
+
+        document.getElementById("signupForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            let name = document.getElementById("name").value;
+            let email = document.getElementById("email").value;
+            let date = new Date().toLocaleString();
+
+            let res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`);
+            let data = await res.json();
+            let content = JSON.parse(atob(data.content));
+            content.push({ name, email, date });
+
+            let updateRes = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${FILE_PATH}`, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: "Update users.json",
+                    content: btoa(JSON.stringify(content, null, 2)),
+                    sha: data.sha
+                })
+            });
+
+            if (updateRes.ok) {
+                alert("User added!");
+                fetchUsers();
+            } else {
+                alert("Failed to update users.json");
+            }
+        });
+
+        fetchUsers();
+    </script>
+</body>
+</html>
